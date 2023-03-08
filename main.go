@@ -5,8 +5,8 @@ import (
 	"flag"
 	"log"
 
+	"github.com/gitlawr/terraform-provider-kaniko/kaniko"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-provider-scaffolding-framework/internal/provider"
 )
 
 // Run "go generate" to format example terraform files and generate the docs for the registry/website
@@ -35,12 +35,11 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		// TODO: Update this string with the published name of your provider.
-		Address: "registry.terraform.io/hashicorp/scaffolding",
+		Address: "example.com/gitlawr/kaniko",
 		Debug:   debug,
 	}
 
-	err := providerserver.Serve(context.Background(), provider.New(version), opts)
+	err := providerserver.Serve(context.Background(), kaniko.New(version), opts)
 
 	if err != nil {
 		log.Fatal(err.Error())

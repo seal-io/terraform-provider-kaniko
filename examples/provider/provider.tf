@@ -1,3 +1,3 @@
-provider "scaffolding" {
+provider "kaniko" {
   # example configuration here
 }
