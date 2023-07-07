@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     kaniko = {
-      source = "example.com/gitlawr/kaniko"
+      source = "registry.terraform.io/seal-io/kaniko"
     }
   }
 }
@@ -9,9 +9,9 @@ terraform {
 provider "kaniko" {}
 
 resource "kaniko_image" "example" {
-  context     = "git://github.com/gitlawr/go-example"
+  context     = "git://github.com/seal-io/simple-web-service"
   dockerfile  = "Dockerfile"
-  destination = "docker.io/lawr/test:1"
+  destination = "docker.io/seal-io/test:1"
 
   build_arg = {
   }

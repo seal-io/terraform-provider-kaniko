@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     kaniko = {
-      source = "example.com/gitlawr/kaniko"
+      source = "registry.terraform.io/seal-io/kaniko"
     }
   }
 }

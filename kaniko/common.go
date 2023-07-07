@@ -40,6 +40,8 @@ type runOptions struct {
 	Cache            bool
 	NoPush           bool
 	Reproducible     bool
+	PushRetry        int64
+	Verbosity        string
 }
 
 type DockerConfigJSON struct {
@@ -101,7 +103,11 @@ func kanikoBuild(ctx context.Context, restConfig *rest.Config, opts *runOptions)
 	for e := range pw.ResultChan() {
 		p, ok := e.Object.(*apibatchv1.Job)
 		if !ok {
-			break
+			tflog.Warn(ctx, "unexpected k8s resource event", map[string]any{"event": e})
+			continue
+		}
+		if p.Name != opts.ID {
+			continue
 		}
 		if p.Status.CompletionTime != nil {
 			// Succeeded
@@ -175,6 +181,8 @@ func getKanikoJob(namespace string, opts *runOptions) *apibatchv1.Job {
 		fmt.Sprintf("--dockerfile=%s", opts.Dockerfile),
 		fmt.Sprintf("--context=%s", opts.Context),
 		fmt.Sprintf("--destination=%s", opts.Destination),
+		fmt.Sprintf("--push-retry=%d", opts.PushRetry),
+		fmt.Sprintf("--verbosity=%s", opts.Verbosity),
 	}
 
 	var volumeMounts []apiv1.VolumeMount
@@ -200,7 +208,8 @@ func getKanikoJob(namespace string, opts *runOptions) *apibatchv1.Job {
 			Name:      opts.ID,
 		},
 		Spec: apibatchv1.JobSpec{
-			BackoffLimit: pointer.Int32(0),
+			BackoffLimit:            pointer.Int32(0),
+			TTLSecondsAfterFinished: pointer.Int32(3600),
 			Template: apiv1.PodTemplateSpec{
 				Spec: apiv1.PodSpec{
 					Containers: []apiv1.Container{

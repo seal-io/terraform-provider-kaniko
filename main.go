@@ -5,8 +5,9 @@ import (
 	"flag"
 	"log"
 
-	"github.com/gitlawr/terraform-provider-kaniko/kaniko"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+
+	"github.com/seal-io/terraform-provider-kaniko/kaniko"
 )
 
 // Run "go generate" to format example terraform files and generate the docs for the registry/website
@@ -35,7 +36,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "example.com/gitlawr/kaniko",
+		Address: "registry.terraform.io/seal-io/kaniko",
 		Debug:   debug,
 	}
 
