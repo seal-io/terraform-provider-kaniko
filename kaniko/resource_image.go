@@ -34,7 +34,9 @@ type imageResourceModel struct {
 	RegistryPassword types.String `tfsdk:"registry_password"`
 	Cache            types.Bool   `tfsdk:"cache"`
 	NoPush           types.Bool   `tfsdk:"no_push"`
+	PushRetry        types.Int64  `tfsdk:"push_retry"`
 	Reproducible     types.Bool   `tfsdk:"reproducible"`
+	Verbosity        types.String `tfsdk:"verbosity"`
 }
 
 // NewImageResource is a helper function to simplify the provider implementation.
@@ -107,9 +109,17 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:    true,
 				Description: "Set to true if you only want to build the image, without pushing to a registry",
 			},
+			"push_retry": schema.Int64Attribute{
+				Optional:    true,
+				Description: "Number of retries for the push operation",
+			},
 			"reproducible": schema.BoolAttribute{
 				Optional:    true,
 				Description: "Set to true to strip timestamps out of the built image and make it reproducible.",
+			},
+			"verbosity": schema.StringAttribute{
+				Optional:    true,
+				Description: "Log level (trace, debug, info, warn, error, fatal, panic) (default info)",
 			},
 		},
 	}
@@ -134,6 +144,8 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	gitPassword := os.Getenv("GIT_PASSWORD")
 	registryUsername := os.Getenv("REGISTRY_USERNAME")
 	registryPassword := os.Getenv("REGISTRY_PASSWORD")
+	var pushRetry int64 = 5
+	var verbosity = "debug"
 
 	if !plan.GitUsername.IsNull() {
 		gitUsername = plan.GitUsername.ValueString()
@@ -151,6 +163,14 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 		registryPassword = plan.RegistryPassword.ValueString()
 	}
 
+	if !plan.PushRetry.IsNull() {
+		pushRetry = plan.PushRetry.ValueInt64()
+	}
+
+	if !plan.Verbosity.IsNull() {
+		verbosity = plan.Verbosity.ValueString()
+	}
+
 	id := fmt.Sprintf("kaniko-%s", utils.String(8))
 	options := &runOptions{
 		ID:               id,
@@ -163,7 +183,9 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 		Destination:      plan.Destination.ValueString(),
 		Cache:            plan.Cache.ValueBool(),
 		NoPush:           plan.NoPush.ValueBool(),
+		PushRetry:        pushRetry,
 		Reproducible:     plan.Reproducible.ValueBool(),
+		Verbosity:        verbosity,
 	}
 
 	err := kanikoBuild(ctx, r.restConfig, options)
