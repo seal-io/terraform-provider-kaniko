@@ -1,35 +1,24 @@
 *.dll
 *.exe
 .DS_Store
-example.tf
-terraform.tfplan
-terraform.tfstate
-bin/
-dist/
-modules-dev/
-/pkg/
-website/.vagrant
-website/.bundle
-website/build
-website/node_modules
-.vagrant/
+kubeconfig
+*.tfplan
+*.tfstate
 *.backup
-./*.tfstate
+bin/
+.sbin/
+.dist/
 .terraform/
+*.db
 *.log
 *.bak
+*.sig
 *~
 .*.swp
 .idea
-*.iml
+.vscode/
 *.test
-*.iml
+.terraform.lock.hcl
 
-website/vendor
-
-# Test exclusions
-!command/test-fixtures/**/*.tfstate
-!command/test-fixtures/**/.terraform/
-
-# Keep windows files with windows line endings
-*.winfile eol=crlf
+# output binary
+terraform-provider-kaniko

@@ -58,7 +58,7 @@ func kanikoBuild(ctx context.Context, restConfig *rest.Config, opts *runOptions)
 		return err
 	}
 
-	var namespace = defaultNamespace
+	namespace := defaultNamespace
 	if _, err = os.Stat(inClusterNamespaceFile); err == nil {
 		namespaceBytes, err := os.ReadFile(inClusterNamespaceFile)
 		if err == nil {
@@ -86,7 +86,7 @@ func kanikoBuild(ctx context.Context, restConfig *rest.Config, opts *runOptions)
 	}
 
 	defer func() {
-		// Clean up
+		// Clean up.
 		if err = batchV1Client.Jobs(namespace).Delete(ctx, opts.ID, metav1.DeleteOptions{}); err != nil {
 			tflog.Warn(ctx, "failed to clean up kaniko job", map[string]any{"error": err})
 		}
@@ -110,13 +110,13 @@ func kanikoBuild(ctx context.Context, restConfig *rest.Config, opts *runOptions)
 			continue
 		}
 		if p.Status.CompletionTime != nil {
-			// Succeeded
+			// Succeeded.
 			break
 		}
 		if p.Status.Failed > 0 {
 			logs, err := getJobPodsLogs(ctx, namespace, opts.ID, restConfig)
 			if err != nil {
-				return fmt.Errorf("kaniko job failed, but cannot get pod logs: %v", err)
+				return fmt.Errorf("kaniko job failed, but cannot get pod logs: %w", err)
 			}
 			return fmt.Errorf("build logs: %s", logs)
 		}
@@ -131,7 +131,7 @@ func getJobPodsLogs(ctx context.Context, namespace, jobName string, restConfig *
 	if err != nil {
 		return "", err
 	}
-	var ls = "job-name=" + jobName
+	ls := "job-name=" + jobName
 	pods, err := clientSet.CoreV1().Pods(namespace).
 		List(ctx, metav1.ListOptions{LabelSelector: ls})
 	if err != nil {

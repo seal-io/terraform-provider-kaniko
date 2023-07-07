@@ -58,6 +58,7 @@ func (r *imageResource) Metadata(_ context.Context, req resource.MetadataRequest
 // Schema defines the schema for the resource.
 func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: `Specify the image to build.`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,
@@ -130,7 +131,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	tflog.Info(ctx, "Start Create")
 
-	// Retrieve values from plan
+	// Retrieve values from plan.
 	var plan imageResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -146,7 +147,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	registryUsername := os.Getenv("REGISTRY_USERNAME")
 	registryPassword := os.Getenv("REGISTRY_PASSWORD")
 	var pushRetry int64 = 5
-	var verbosity = "debug"
+	verbosity := "debug"
 
 	if !plan.GitUsername.IsNull() {
 		gitUsername = plan.GitUsername.ValueString()
@@ -197,7 +198,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	plan.ID = types.StringValue(id)
 
-	// Set state to fully populated data
+	// Set state to fully populated data.
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -207,7 +208,7 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 // Read refreshes the Terraform state with the latest data.
 func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	// Get current state
+	// Get current state.
 	var state imageResourceModel
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -215,7 +216,7 @@ func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	// Set refreshed state
+	// Set refreshed state.
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 }
