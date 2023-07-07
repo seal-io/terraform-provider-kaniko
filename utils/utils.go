@@ -13,12 +13,12 @@ import (
 )
 
 func GetConfig(kubeconfigPath string) (*rest.Config, error) {
-	// use the specified config.
+	// Use the specified config.
 	if kubeconfigPath != "" {
 		return LoadConfig(kubeconfigPath)
 	}
 
-	// try the in-cluster config.
+	// Try the in-cluster config.
 	if c, err := rest.InClusterConfig(); err == nil {
 		return c, nil
 	}
@@ -27,8 +27,8 @@ func GetConfig(kubeconfigPath string) (*rest.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	// try the recommended config.
-	var loader = clientcmd.NewDefaultClientConfigLoadingRules()
+	// Try the recommended config.
+	loader := clientcmd.NewDefaultClientConfigLoadingRules()
 	loader.Precedence = append(loader.Precedence,
 		filepath.Join(home, clientcmd.RecommendedHomeDir, clientcmd.RecommendedFileName))
 	return loadConfig(loader)
@@ -39,12 +39,12 @@ func LoadConfig(kubeconfigPath string) (*rest.Config, error) {
 		return nil, errors.New("blank kubeconfig path")
 	}
 
-	var loader = &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath}
+	loader := &clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath}
 	return loadConfig(loader)
 }
 
 func loadConfig(loader clientcmd.ClientConfigLoader) (*rest.Config, error) {
-	var overrides = &clientcmd.ConfigOverrides{}
+	overrides := &clientcmd.ConfigOverrides{}
 	return clientcmd.
 		NewNonInteractiveDeferredLoadingClientConfig(loader, overrides).
 		ClientConfig()
@@ -67,7 +67,7 @@ func String(n int, letters ...string) string {
 	var bb bytes.Buffer
 	bb.Grow(n)
 	l := uint32(len(letterRunes))
-	// on each loop, generate one random rune and append to output.
+	// On each loop, generate one random rune and append to output.
 	for i := 0; i < n; i++ {
 		bb.WriteRune(letterRunes[binary.BigEndian.Uint32(Bytes(4))%l])
 	}

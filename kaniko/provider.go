@@ -42,7 +42,11 @@ func (p *kanikoProvider) Schema(ctx context.Context, req provider.SchemaRequest,
 	}
 }
 
-func (p *kanikoProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+func (p *kanikoProvider) Configure(
+	ctx context.Context,
+	req provider.ConfigureRequest,
+	resp *provider.ConfigureResponse,
+) {
 	tflog.Info(ctx, "Configuring kaniko client")
 
 	var config kanikoProviderModel

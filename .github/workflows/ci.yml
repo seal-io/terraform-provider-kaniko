@@ -1,0 +1,126 @@
+name: ci
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+env:
+  VERSION: "${{ github.ref_name }}"
+  GO_VERSION: "1.19.10"
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - 'main'
+  workflow_dispatch: {}
+
+jobs:
+  skip:
+    timeout-minutes: 5
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: write
+    outputs:
+      should: ${{ steps.duplicate.outputs.should_skip }}
+    steps:
+      - name: Check Duplicate
+        id: duplicate
+        uses: fkirc/skip-duplicate-actions@v5
+        with:
+          github_token: "${{ github.token }}"
+          paths_ignore: '["**.tmpl", "**.md", "**.mdx", "**.png", "**.jpg"]'
+          do_not_skip: '["workflow_dispatch", "push"]'
+        continue-on-error: true
+
+  ci:
+    needs:
+      - skip
+    timeout-minutes: 60
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Setup Go
+        timeout-minutes: 15
+        uses: actions/setup-go@v4
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+          cache-dependency-path: |
+            **/go.sum
+      - name: Setup Toolbox
+        timeout-minutes: 5
+        uses: actions/cache@v3
+        with:
+          # restore/save service binaries, e.g. goimports, golangci-lint, commitsar.
+          key: toolbox-${{ runner.os }}
+          path: |
+            ${{ github.workspace }}/.sbin
+      - name: Build
+        run: make ci
+        env:
+          CI_CHECK: "${{ needs.skip.outputs.should != 'true' }}"
+          LINT_DIRTY: "true"
+      - name: Archive Package Result
+        uses: actions/cache/save@v3
+        with:
+          # save package resources, e.g. archive result.
+          key: archive-${{ runner.os }}-${{ github.sha }}
+          path: |
+            ${{ github.workspace }}/.dist/package
+
+  release:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    needs:
+      - ci
+    permissions:
+      contents: write
+      actions: read
+      id-token: write
+    timeout-minutes: 20
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Unarchive Package Result
+        timeout-minutes: 5
+        uses: actions/cache/restore@v3
+        with:
+          # restore package resources, e.g. archive result.
+          key: archive-${{ runner.os }}-${{ github.sha }}
+          path: |
+            ${{ github.workspace }}/.dist/package
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets.CI_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.CI_GPG_PASSPHRASE }}
+      - name: Sign Checksum
+        run: make release
+        env:
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ github.token }}
+          fail_on_unmatched_files: true
+          files: |
+            ${{ github.workspace }}/.dist/package/*
