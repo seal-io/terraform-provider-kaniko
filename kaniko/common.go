@@ -101,7 +101,11 @@ func kanikoBuild(ctx context.Context, restConfig *rest.Config, opts *runOptions)
 	for e := range pw.ResultChan() {
 		p, ok := e.Object.(*apibatchv1.Job)
 		if !ok {
-			break
+			tflog.Warn(ctx, "unexpected k8s resource event", map[string]any{"event": e})
+			continue
+		}
+		if p.Name != opts.ID {
+			continue
 		}
 		if p.Status.CompletionTime != nil {
 			// Succeeded
