@@ -3,8 +3,9 @@ package kaniko
 import (
 	"context"
 	"fmt"
-	"github.com/gitlawr/terraform-provider-kaniko/utils"
 	"os"
+
+	"github.com/seal-io/terraform-provider-kaniko/utils"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

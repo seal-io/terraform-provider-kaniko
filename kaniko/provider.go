@@ -2,13 +2,15 @@ package kaniko
 
 import (
 	"context"
-	"github.com/gitlawr/terraform-provider-kaniko/utils"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/seal-io/terraform-provider-kaniko/utils"
 )
 
 // Ensure kanikoProvider satisfies various provider interfaces.
