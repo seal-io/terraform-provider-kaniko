@@ -7,7 +7,7 @@ permissions:
 
 env:
   VERSION: "${{ github.ref_name }}"
-  GO_VERSION: "1.19.10"
+  GO_VERSION: "1.19.12"
 
 defaults:
   run:
