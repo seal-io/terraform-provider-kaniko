@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/seal-io/terraform-provider-kaniko/utils"
-
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"k8s.io/client-go/rest"
+
+	"github.com/seal-io/terraform-provider-kaniko/utils"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -63,7 +62,7 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"id": schema.StringAttribute{
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					RandomModifier(),
 				},
 			},
 			"git_username": schema.StringAttribute{
@@ -139,6 +138,81 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 		return
 	}
 
+	plan.ID = types.StringValue(fmt.Sprintf("kaniko-%s", utils.String(8)))
+
+	state, err := r.build(ctx, plan)
+	if err != nil {
+		resp.Diagnostics.AddError("kaniko build failed", err.Error())
+		return
+	}
+
+	// Set state to fully populated data.
+	diags = resp.State.Set(ctx, state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+// Read refreshes the Terraform state with the latest data.
+func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	// Get current state.
+	var state imageResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Set refreshed state.
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+}
+
+// Update updates the resource and sets the updated Terraform state on success.
+func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	tflog.Info(ctx, "Start Update")
+
+	// Retrieve values from plan.
+	var plan imageResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	state, err := r.build(ctx, plan)
+	if err != nil {
+		resp.Diagnostics.AddError("kaniko build failed", err.Error())
+		return
+	}
+
+	// Set state to fully populated data.
+	diags = resp.State.Set(ctx, state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+// Delete deletes the resource and removes the Terraform state on success.
+func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+}
+
+// Configure adds the provider configured client to the resource.
+func (r *imageResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+
+	var ok bool
+	r.restConfig, ok = req.ProviderData.(*rest.Config)
+	if !ok {
+		resp.Diagnostics.AddError("invalid provider data", "expected a rest config")
+	}
+}
+
+func (r *imageResource) build(ctx context.Context, plan imageResourceModel) (*imageResourceModel, error) {
 	// Default values to environment variables, but override
 	// with Terraform configuration value if set.
 
@@ -173,9 +247,8 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 		verbosity = plan.Verbosity.ValueString()
 	}
 
-	id := fmt.Sprintf("kaniko-%s", utils.String(8))
 	options := &runOptions{
-		ID:               id,
+		ID:               plan.ID.ValueString(),
 		GitPassword:      gitPassword,
 		GitUsername:      gitUsername,
 		RegistryUsername: registryUsername,
@@ -192,52 +265,8 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	err := kanikoBuild(ctx, r.restConfig, options)
 	if err != nil {
-		resp.Diagnostics.AddError("kaniko build failed", err.Error())
-		return
+		return nil, err
 	}
 
-	plan.ID = types.StringValue(id)
-
-	// Set state to fully populated data.
-	diags = resp.State.Set(ctx, plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-}
-
-// Read refreshes the Terraform state with the latest data.
-func (r *imageResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	// Get current state.
-	var state imageResourceModel
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Set refreshed state.
-	diags = resp.State.Set(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-}
-
-// Update updates the resource and sets the updated Terraform state on success.
-func (r *imageResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-}
-
-// Delete deletes the resource and removes the Terraform state on success.
-func (r *imageResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-}
-
-// Configure adds the provider configured client to the resource.
-func (r *imageResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	if req.ProviderData == nil {
-		return
-	}
-
-	var ok bool
-	r.restConfig, ok = req.ProviderData.(*rest.Config)
-	if !ok {
-		resp.Diagnostics.AddError("invalid provider data", "expected a rest config")
-	}
+	return &plan, nil
 }
