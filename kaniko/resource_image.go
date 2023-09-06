@@ -22,9 +22,10 @@ var (
 )
 
 type imageResourceModel struct {
-	ID          types.String `tfsdk:"id"`
+	BuildID     types.String `tfsdk:"build_id"`
 	GitUsername types.String `tfsdk:"git_username"`
 	GitPassword types.String `tfsdk:"git_password"`
+	AlwaysRun   types.Bool   `tfsdk:"always_run"`
 
 	Context          types.String `tfsdk:"context"`
 	Dockerfile       types.String `tfsdk:"dockerfile"`
@@ -59,10 +60,10 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 	resp.Schema = schema.Schema{
 		Description: `Specify the image to build.`,
 		Attributes: map[string]schema.Attribute{
-			"id": schema.StringAttribute{
+			"build_id": schema.StringAttribute{
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
-					RandomModifier(),
+					BuildIDModifier(),
 				},
 			},
 			"git_username": schema.StringAttribute{
@@ -74,6 +75,10 @@ func (r *imageResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:    true,
 				Sensitive:   true,
 				Description: "Password for the git clone",
+			},
+			"always_run": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Set to true to run build image every time even variables aren't change",
 			},
 			"registry_username": schema.StringAttribute{
 				Optional:    true,
@@ -137,8 +142,6 @@ func (r *imageResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	plan.ID = types.StringValue(fmt.Sprintf("kaniko-%s", utils.String(8)))
 
 	state, err := r.build(ctx, plan)
 	if err != nil {
@@ -247,8 +250,9 @@ func (r *imageResource) build(ctx context.Context, plan imageResourceModel) (*im
 		verbosity = plan.Verbosity.ValueString()
 	}
 
+	buildID := fmt.Sprintf("kaniko-%s", utils.String(8))
 	options := &runOptions{
-		ID:               plan.ID.ValueString(),
+		ID:               buildID,
 		GitPassword:      gitPassword,
 		GitUsername:      gitUsername,
 		RegistryUsername: registryUsername,
@@ -268,5 +272,6 @@ func (r *imageResource) build(ctx context.Context, plan imageResourceModel) (*im
 		return nil, err
 	}
 
+	plan.BuildID = types.StringValue(buildID)
 	return &plan, nil
 }
